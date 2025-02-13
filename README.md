@@ -1,4 +1,4 @@
-# task5-algorithm-4
+# task6-algorithm-4
 
 ex1-remove-duplicate  
 ![alt text](./console-img/ex1.png)
