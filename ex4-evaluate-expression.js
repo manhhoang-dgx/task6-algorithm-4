@@ -8,198 +8,93 @@ readline.question("enter text: ", (text) => {
   readline.close();
 });
 
-function addPrecedence(params) {
-  if (typeof params === "string") {
-    let result =
-      "(" +
-      addPrecedence({
-        text: params,
-        start: 0,
-      }) +
-      ")";
-    return result;
-  }
-  let text = params.text;
-  let start = params.start;
-  let prevIsAddMinus = true;
-  let recentNumberFirstIndex = -1;
-  let recentNumberLastIndex = -1;
-  for (let i = start; i < text.length; i++) {
-    if (text[i] === " ") continue;
-
-    switch (text[i]) {
-      case "(":
-        if (recentNumberFirstIndex === -1) recentNumberFirstIndex = i;
-        params.text = text;
-        params.start = i + 1;
-        text = addPrecedence(params);
-        i = params.start;
-        if (recentNumberFirstIndex !== -1) recentNumberLastIndex = i;
-        break;
-      case ")":
-        if (!prevIsAddMinus) {
-          if (recentNumberLastIndex !== -1) {
-            let tmp =
-              text.substring(0, recentNumberLastIndex + 1) +
-              ")" +
-              text.substring(recentNumberLastIndex + 1);
-            text = tmp;
-          }
-        }
-        params.start = i;
-        return text;
-      case "*":
-      case "/":
-        if (prevIsAddMinus) {
-          if (recentNumberFirstIndex !== -1) {
-            let tmp =
-              text.substring(0, recentNumberFirstIndex) +
-              "(" +
-              text.substring(recentNumberFirstIndex);
-            text = tmp;
-          }
-        }
-        prevIsAddMinus = false;
-        recentNumberFirstIndex = -1;
-        recentNumberLastIndex = -1;
-        break;
-      case "+":
-      case "-":
-        if (!prevIsAddMinus) {
-          if (recentNumberLastIndex !== -1) {
-            let tmp =
-              text.substring(0, recentNumberLastIndex + 1) +
-              ")" +
-              text.substring(recentNumberLastIndex + 1);
-            text = tmp;
-          }
-        }
-        prevIsAddMinus = true;
-        recentNumberFirstIndex = -1;
-        recentNumberLastIndex = -1;
-        break;
-      default:
-        if (recentNumberFirstIndex === -1) recentNumberFirstIndex = i;
-        if (recentNumberFirstIndex !== -1) recentNumberLastIndex = i;
-        break;
-    }
-  }
-  if (!prevIsAddMinus) {
-    if (recentNumberLastIndex !== -1) {
-      let tmp =
-        text.substring(0, recentNumberLastIndex + 1) +
-        ")" +
-        text.substring(recentNumberLastIndex + 1);
-      text = tmp;
-    }
-  }
-  return text;
-}
-
-function calculate(result, number, operation) {
-  switch (operation) {
+function checkPrecedence(operator) {
+  switch (operator) {
     case "+":
-      result += number;
-      break;
     case "-":
-      result -= number;
-      break;
+      return 1;
     case "*":
-      result *= number;
-      break;
     case "/":
-      result /= number;
-      break;
+      return 2;
+    case "(":
+      return -1;
     default:
-      return "invalid operation";
+      return 0;
+  }
+}
+
+function toPosfix(text) {
+  let result = [];
+  let stack = ["("];
+  let number = null;
+  let operatorExisted = true;
+  let negative = false;
+  text += ")";
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === " ") continue;
+    if (text[i] === "-" && operatorExisted) {
+      negative = !negative;
+      continue;
+    }
+    switch (text[i]) {
+      case "+":
+      case "-":
+      case "*":
+      case "/":
+      case "(":
+      case ")":
+        if (number !== null) {
+          result.push(negative ? -number : number);
+          number = null;
+          if (text[i] !== "(" && text[i] !== ")") {
+            negative = false;
+            operatorExisted = true;
+          } else operatorExisted = false;
+        }
+        while (
+          text[i] !== "(" &&
+          checkPrecedence(stack[stack.length - 1]) >= checkPrecedence(text[i])
+        ) {
+          result.push(stack.pop());
+        }
+        if (text[i] === ")") stack.pop();
+        else stack.push(text[i]);
+        break;
+      default:
+        operatorExisted = false;
+        if (number === null) number = Number.parseInt(text[i]);
+        else number = number * 10 + Number.parseInt(text[i]);
+        break;
+    }
   }
   return result;
 }
 
-function evaluateExpression(params) {
-  if (typeof params === "string") {
-    return evaluateExpression({
-      text: addPrecedence(params),
-      start: 0,
-    });
+function calculate(a, b, operator) {
+  switch (operator) {
+    case "+":
+      return a + b;
+    case "-":
+      return a - b;
+    case "*":
+      return a * b;
+    case "/":
+      return a / b;
+    default:
+      return 0;
   }
-  const text = params.text;
-  const start = params.start;
-  let result = 0;
-  let isNegative = false;
-  let operation = "+";
-  let confirmedOperation = "";
-  let number = null;
+}
 
-  for (let i = start; i < text.length; i++) {
-    if (text[i] === " ") continue;
-    if (
-      text[i] === "+" ||
-      text[i] === "-" ||
-      text[i] === "*" ||
-      text[i] === "/" ||
-      text[i] === ")"
-    ) {
-      if (confirmedOperation !== "") {
-        if (number === null) return "invalid expression";
-        result = calculate(result, number, confirmedOperation);
-        confirmedOperation = "";
-        number = null;
-        isNegative = false;
-      }
+function evaluateExpression(text) {
+  let arr = toPosfix(text);
+  let stack = [];
+  arr.forEach((value) => {
+    if (typeof value === "number") stack.push(value);
+    else {
+      let b = stack.pop();
+      let a = stack.pop();
+      stack.push(calculate(a, b, value));
     }
-    switch (text[i]) {
-      case "+":
-        if (operation === "") operation = "+";
-        break;
-      case "-":
-        if (operation === "") operation = "-";
-        else isNegative = !isNegative;
-        break;
-      case "*":
-        if (operation === "") operation = "*";
-        else return "invalid expression";
-
-        break;
-      case "/":
-        if (operation === "") operation = "/";
-        else return "invalid expression";
-
-        break;
-      case "(":
-        params.start = i + 1;
-        let innerResult = evaluateExpression(params);
-        if (innerResult !== "invalid expression") number = innerResult;
-        else return innerResult;
-
-        if (operation !== "") {
-          confirmedOperation = operation;
-          operation = "";
-        }
-
-        i = params.start;
-        break;
-      case ")":
-        params.start = i;
-        return result;
-      default:
-        if (text[i] === " ") continue;
-        let tmp = Number.parseFloat(text[i]);
-        if (!Number.isInteger(tmp)) return "invalid expression";
-
-        if (isNegative) tmp = -tmp;
-
-        if (number === null) number = tmp;
-        else number = number * 10 + tmp;
-
-        if (operation !== "") {
-          confirmedOperation = operation;
-          operation = "";
-        }
-
-        break;
-    }
-  }
-  result = number;
-  return result;
+  });
+  return stack.pop();
 }
