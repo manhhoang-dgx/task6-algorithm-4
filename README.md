@@ -11,4 +11,3 @@ ex3-find-second-largest
 
 ex4-evaluate-expression
 ![alt text](./console-img/ex4.png)
-![alt text](./console-img/ex4-2.png)
